@@ -1,0 +1,264 @@
+# Draft coffee shop api definition in swagger
+swagger: '2.0'
+info:
+  title: Coffe Shop API
+  description: API for a fictional coffee shop
+  version: "1.0.0"
+# the domain of the service
+host: api.coffeeshop.com
+# array of all schemes that your API supports
+schemes:
+  - https
+# will be prefixed to all paths
+basePath: /v1
+securityDefinitions:
+  coffeeshopAuth:
+    type: oauth2
+    authorizationUrl: https://api.coffeeshop.com/oauth/dialog
+    flow: implicit
+    scopes:
+      write:menuitems: Supports modifying the menu
+      read:orders: Can see all orders
+      write:order: Can update orders
+produces:
+  - application/json
+paths:
+  /menuitems:
+    get:
+      summary: All Menu Items
+      description: |
+        The menu items endpoint provides all of the items on the menu.
+      tags:
+        - Menu Item
+      responses:
+        200:
+          description: An array of menu items
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/MenuItem'
+    post:
+      summary: Create a new menu item.
+      description: |
+        Allows baristas to add seasonal items and specials to the menu.
+      tags:
+        - Menu Item
+      parameters:
+        - name: details
+          in: body
+          description: The new item details
+          required: true
+          schema:
+            $ref: '#/definitions/MenuItem'
+      security:
+        - coffeeshopAuth:
+          - write:menuitems
+      responses:
+        201:
+          description: The newly created menu item
+          schema: 
+            $ref: '#/definitions/MenuItem'
+        400:
+          description: Bad order details
+  /menuitems/{itemId}:
+    get:
+      summary: A specific menu item
+      description: Returns the details of a specific menu item.
+      tags:
+        - Menu Item
+      parameters:
+        - name: itemId
+          in: path
+          description: The id of the requested item
+          required: true
+          type: string
+      responses:
+        200:
+          description: The specific menu item details
+          schema:
+            $ref: '#/definitions/MenuItem'
+        404:
+          description: item not found
+    put:
+      summary: Update a specific menu item
+      description: Update details of a specific menu item
+      tags:
+        - Menu Item
+      parameters:
+        - name: itemId
+          in: path
+          description: The id of the requested item
+          required: true
+          type: string
+        - name: details
+          in: body
+          description: The new item details
+          required: true
+          schema:
+            $ref: '#/definitions/MenuItem'
+      security:
+        - coffeeshopAuth:
+          - write:menuitems
+      responses:
+        200:
+          description: The item succesfully updated
+        400:
+          description: Invalid item details
+        404:
+          description: item not found
+    delete:
+      summary: Remove a specific menu item
+      description: Remove an item from the menu
+      tags:
+        - Menu Item
+      parameters:
+        - name: itemId
+          in: path
+          description: The id of the requested item
+          required: true
+          type: string
+      security:
+        - coffeeshopAuth:
+          - write:menuitems
+      responses:
+        200:
+          description: The item was successfully removed
+        404:
+          description: item not found
+  /orders:
+    get:
+      summary: All orders
+      description: The orders endpoint returns an array of orders. The orders array in the response will have a maximum length based on the limit parameter. The response value count may exceed limit, therefore subsequent API requests may be necessary.
+      parameters:
+        - name: offset
+          in: query
+          type: integer
+          format: int32
+          description: Offset the list of returned results by this amount. Default is zero.
+        - name: limit
+          in: query
+          type: integer
+          format: int32
+          description: Number of items to retrieve. Default is 5, maximum is 10.
+      tags:
+        - Order
+      security:
+        - coffeeshopAuth:
+          - read:orders
+      responses:
+        200:
+          description: The requested orders
+          schema:
+            $ref: '#/definitions/Orders'
+    post:
+      summary: Create order
+      description: Allows a customer to submit an order.
+      parameters:
+        - name: details
+          in: body
+          schema:
+            $ref: '#/definitions/Order'
+          description: The order details
+      tags:
+        - Order
+      responses:
+        201:
+          description: Order successfully created
+        400: 
+          description: Bad order details
+  /orders/{orderId}:
+    get:
+      summary: Order details
+      description: The details of the requested order
+      parameters:
+        - name: orderId
+          in: path
+          type: string
+          required: true
+          description: The unique id of the requested order
+      tags:
+        - Order
+      responses:
+        200:
+          description: The order details
+          schema:
+            $ref: '#/definitions/Order'
+        404:
+          description: Order not found
+    put:
+      summary: Update order
+      description: Allow a barista to update an existing order
+      parameters:
+        - name: orderId
+          in: path
+          type: string
+          required: true
+          description: The unique id of the requested order
+        - name: details
+          in: body
+          schema:
+            $ref: '#/definitions/Order'
+          description: The new order details
+      tags:
+        - Order
+      security:
+        - coffeeshopAuth:
+          - write:order
+      responses:
+        200:
+          description: The order details
+          schema:
+            $ref: '#/definitions/Order'
+        400:
+          description: Invalid order details
+        404: 
+          description: Order not found
+definitions:
+  MenuItem:
+    type: object
+    properties:
+      itemId:
+        type: string
+        description: The unique id of the menu item
+      category:
+        type: string
+        description: The type of item (ex. coffee or tea)
+      name:
+        type: string
+        description: The friendly name of the menu item
+      size:
+        type: string
+        description: The size of the menu item (ex. small, medium, or larger)
+      cost:
+        type: string
+        description: The cost of the item in US dollars (ex. $1.25 or $.50)
+  Order:
+    type: object
+    properties:
+      itemid:
+        type: string
+      count:
+        type: number
+        minimum: 0
+        format: int32
+      ready:
+        type: boolean
+  Orders:
+    type: object
+    properties:
+      offset:
+        type: integer
+        format: int32
+        description: Position in pagination
+      limit:
+        type: integer
+        format: int32
+        description: Number of items to retrieve (10 max).
+      count:
+        type: integer
+        format: int32
+        description: Total number of items available
+      orders:
+        type: array
+        items:
+          $ref: '#/definitions/Order'

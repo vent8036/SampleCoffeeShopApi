@@ -1,0 +1,285 @@
+#%RAML 0.8
+title: Coffe Shop API
+version: 1.0.0
+documentation:
+- title: Coffe Shop API
+  content: API for a fictional coffee shop
+baseUri: https://api.coffeeshop.com/v1
+securitySchemes:
+    - oauth_2_0:
+        description: |
+            Dropbox supports OAuth 2.0 for authenticating all API requests.
+        type: OAuth 2.0
+        describedBy:
+            headers:
+                Authorization:
+                    description: |
+                       Used to send a valid OAuth 2 access token. 
+                    type: string
+            responses:
+                401:
+                    description: |
+                        Bad or expired token. This can happen if the user or Dropbox
+                        revoked or expired an access token. To fix, you should re-
+                        authenticate the user.
+                403:
+                    description: |
+                        Bad OAuth request (wrong consumer key, bad nonce, expired
+                        timestamp...). Unfortunately, re-authenticating the user won't help here.
+        settings:
+          authorizationUri: https://www.coffeeshop.com/v1/oauth2/authorize
+          accessTokenUri: https://api.coffeeshop.com/v1/oauth2/token
+          authorizationGrants: [ code, token ]
+schemas:
+- MenuItem-array: |
+    {
+      "type": "array",
+      "items": {
+        "id": "MenuItem",
+        "title": "MenuItem",
+        "type": "object",
+        "properties": {
+          "itemId": {
+            "description": "The unique id of the menu item",
+            "type": "string"
+          },
+          "category": {
+            "description": "The type of item (ex. coffee or tea)",
+            "type": "string"
+          },
+          "name": {
+            "description": "The friendly name of the menu item",
+            "type": "string"
+          },
+          "size": {
+            "description": "The size of the menu item (ex. small, medium, or larger)",
+            "type": "string"
+          },
+          "cost": {
+            "description": "The cost of the item in US dollars (ex. $1.25 or $.50)",
+            "type": "string"
+          }
+        }
+      }
+    }
+- MenuItem: |
+    {
+      "id": "MenuItem",
+      "title": "MenuItem",
+      "type": "object",
+      "properties": {
+        "itemId": {
+          "description": "The unique id of the menu item",
+          "type": "string"
+        },
+        "category": {
+          "description": "The type of item (ex. coffee or tea)",
+          "type": "string"
+        },
+        "name": {
+          "description": "The friendly name of the menu item",
+          "type": "string"
+        },
+        "size": {
+          "description": "The size of the menu item (ex. small, medium, or larger)",
+          "type": "string"
+        },
+        "cost": {
+          "description": "The cost of the item in US dollars (ex. $1.25 or $.50)",
+          "type": "string"
+        }
+      }
+    }
+- Orders: |
+    {
+      "id": "Orders",
+      "title": "Orders",
+      "type": "object",
+      "properties": {
+        "offset": {
+          "description": "Position in pagination",
+          "type": "integer",
+          "format": "int32"
+        },
+        "limit": {
+          "description": "Number of items to retrieve (10 max).",
+          "type": "integer",
+          "format": "int32"
+        },
+        "count": {
+          "description": "Total number of items available",
+          "type": "integer",
+          "format": "int32"
+        },
+        "orders": {
+          "type": "array",
+          "items": {
+            "id": "Order",
+            "title": "Order",
+            "type": "object",
+            "properties": {
+              "itemid": {
+                "type": "string"
+              },
+              "count": {
+                "type": "number"
+              },
+              "ready": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
+    }
+- Order: |
+    {
+      "id": "Order",
+      "title": "Order",
+      "type": "object",
+      "properties": {
+        "itemid": {
+          "type": "string"
+        },
+        "count": {
+          "type": "number"
+        },
+        "ready": {
+          "type": "boolean"
+        }
+      }
+    }
+/menuitems:
+  /{itemId}:
+    uriParameters:
+      itemId:
+        description: The id of the requested item
+        type: string
+        required: true
+        displayName: itemId
+    get:
+      displayName: MenuitemsByItemId
+      description: A specific menu item
+      responses:
+        200:
+          description: The specific menu item details
+          body:
+            application/json:
+              schema: MenuItem
+        404:
+          description: item not found
+    put:
+      securedBy: [oauth_2_0: { scopes: [Barista] } ]
+      body:
+        application/json:
+          schema: MenuItem
+      displayName: MenuitemsByItemId
+      description: Update a specific menu item
+      responses:
+        200:
+          description: The item succesfully updated
+        400:
+          description: Invalid item details
+        404:
+          description: item not found
+    delete:
+      securedBy: [oauth_2_0: { scopes: [Barista] } ]
+      displayName: MenuitemsByItemId
+      description: Remove a specific menu item
+      responses:
+        404:
+          description: item not found
+  get:
+    displayName: Menuitems
+    description: All Menu Items
+    responses:
+      200:
+        description: An array of menu items
+        body:
+          application/json:
+            schema: MenuItem-array
+  post:
+    securedBy: [oauth_2_0: { scopes: [Barista] } ]
+    body:
+      application/json:
+        schema: MenuItem
+    displayName: Menuitems
+    description: Create a new menu item.
+    responses:
+      200:
+        description: The newly created menu item
+        body:
+          application/json:
+            schema: MenuItem
+      400:
+        description: Bad order details
+/orders:
+  /{orderId}:
+    uriParameters:
+      orderId:
+        description: The unique id of the requested order
+        type: string
+        required: true
+        displayName: orderId
+    get:
+      securedBy: [oauth_2_0: { scopes: [Barista, CurrentUser] } ]
+      displayName: OrdersByOrderId
+      description: Order details
+      responses:
+        200:
+          description: The order details
+          body:
+            application/json:
+              schema: Order
+        404:
+          description: Order not found
+    put:
+      securedBy: [oauth_2_0: { scopes: [Barista] } ]
+      body:
+        application/json:
+          schema: Order
+      displayName: OrdersByOrderId
+      description: Update order
+      responses:
+        200:
+          description: The order details
+          body:
+            application/json:
+              schema: Order
+        400:
+          description: Invalid order details
+        404:
+          description: Order not found
+  get:
+    securedBy: [oauth_2_0: { scopes: [Barista] } ]
+    displayName: Orders
+    description: All orders
+    responses:
+      200:
+        description: The requested orders
+        body:
+          application/json:
+            schema: Orders
+    queryParameters:
+      offset:
+        description: Offset the list of returned results by this amount. Default is zero.
+        type: integer
+        required: true
+        displayName: offset
+      limit:
+        description: Number of items to retrieve. Default is 5, maximum is 10.
+        type: integer
+        required: true
+        displayName: limit
+  post:
+    securedBy: [oauth_2_0]
+    body:
+      application/json:
+        schema: Order
+    displayName: Orders
+    description: Create order
+    responses:
+      200:
+        description: Order successfully created
+      400:
+        description: Bad order details
